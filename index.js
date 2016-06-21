@@ -37,7 +37,6 @@ var connector = new builder.ChatConnector({
 		appId: '7bfab6b5-c856-4027-9709-6034e9dbc451',
     appPassword: 'aQBE2rYGN51oXMC2mhqLTxK',
 });
-var bot = new builder.UniversalBot(connector);
 
 // Setup Restify Server
 var server = restify.createServer();
@@ -46,6 +45,7 @@ server.listen(process.env.port || 3978, function () {
    console.log('%s listening to %s', server.name, server.url); 
 });
 
+var bot = new builder.UniversalBot(connector);
 
 //=========================================================
 // Activity Events
@@ -106,7 +106,7 @@ bot.on('deleteUserData', function (message) {
 //=========================================================
 
 // Anytime the major version is incremented any existign conversations will be restarted.
-bot.use(builder.Middleware.dialogVersion({ version: 1.0, resetCommand: /^reset/i }));
+// bot.use(builder.Middleware.dialogVersion({ version: 1.0, resetCommand: /^reset/i }));
 
 //=========================================================
 // Bots Dialogs
@@ -114,6 +114,7 @@ bot.use(builder.Middleware.dialogVersion({ version: 1.0, resetCommand: /^reset/i
 
 bot.dialog('/', [
     function (session) {
+    		console.log(session.message.user.name, 'says', session.message.text)
         // Send a greeting and start the menu.
         var card = new builder.HeroCard(session)
             .title("Microsoft Bot Framework")
@@ -125,6 +126,8 @@ bot.dialog('/', [
         session.send(msg);
         session.send("Hi... I'm the Microsoft Bot Framework demo bot for Skype. I can show you everything you can use our Bot Builder SDK to do on Skype.");
         session.beginDialog('/menu');
+        console.log('BOT WANTS TO TALK TO')
+        console.log(session.message.address)
     },
     function (session, results) {
         // Always say goodbye
