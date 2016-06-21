@@ -1,0 +1,17 @@
+{
+  "name": "jolly-pirate-post",
+  "version": "1.0.0",
+  "description": "chat bot to handle sending postcards",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "botbuilder": "^1.0.1",
+    "http": "0.0.0",
+    "https": "^1.0.0",
+    "restify": "^4.1.1"
+  }
+}
