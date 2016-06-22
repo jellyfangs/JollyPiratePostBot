@@ -1,6 +1,8 @@
 var restify = require('restify');
 var builder = require('botbuilder');
 
+var cogs = require('./CSServices')
+
 //=========================================================
 // Bot Setup
 //=========================================================
@@ -75,7 +77,8 @@ bot.dialog('/', [
         // var msg = new builder.Message(session).attachments([card]);
         // session.send(msg);
         session.send("I can send a postcard for you to anywhere. Get started?");
-        builder.Prompts.confirm(session);
+        session.beginDialog('/start')
+        // builder.Prompts.confirm(session);
     },
     function (session, results) {
         if (results && results.resumed == builder.ResumeReason.completed) {
@@ -87,12 +90,37 @@ bot.dialog('/', [
     }
 ]);
 
+bot.dialog('/start', [
+    function (session) {
+        builder.Prompts.text(session, 'tell me something wrong')
+    },
+    function (session, results) {
+        if (results && results.response) {
+            cogs.Spellcheck(results.response, function (reply) {
+                console.log('RESPONSE FROM SPELLCHECK:', reply)
+                // SPELL CHECKS
+                if (!reply.error) {
+                    if (reply != null) {
+                        session.send("You meant to say %s", reply)
+                    } else {
+                        session.send("You said %s", results.response)
+                    }
+                } else {
+                    session.send("Got an error")
+                }
+                
+                session.endDialog('end')
+            })
+        }
+    }
+])
+
+
 /*
 
  Welcome to Jolly Pirate Post!
 
  I can send a postcard for you to anywhere. Get started?
- => bing intent api
 
  Give me a photo to work with
  => computer vision api
@@ -100,11 +128,13 @@ bot.dialog('/', [
  How do you feel today?
  => emotion api
  
+
  Which card do you like?
  => carousel
 
  Tell me a short story about the card!
- => bing spell check api
+ => bing spell check api - DONE
+
  => text analytics api
 
  Where will the card go?
@@ -114,16 +144,16 @@ bot.dialog('/', [
  => prompt time
 
  Great, here you are!
- => receipt
+ => receipt - DONE
 
  Also, use this referral code
- => group chat
+ => group chat - PUSH
 
 */
 
 
 // ATTACHMENTS
-bot.dialog('/start', [
+bot.dialog('/photo', [
     function (session) {
         builder.Prompts.attachment(session, "Give me a photo to work with.");
     },

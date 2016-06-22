@@ -1,11 +1,10 @@
 * JOLLY PIRATE POST
 
 
-- hook up botbuilder to skype
-- hook up LUIS dialogs
-	- intents
+- hook up botbuilder to skype - DONE
+- hook up LUIS dialogs - PUSH
 - image processing
-	- recognition https://www.microsoft.com/cognitive-services/en-us/computer-vision-api
+	- recognition
 	- filters
 	- resize
 	- carousel of photos
