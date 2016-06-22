@@ -2,13 +2,12 @@
 
  Welcome to Jolly Pirate Post!
 
- I can send a postcard for you to anywhere. Get started?
+ I can send a postcard for you to anywhere. Let's get started!
 
  Give me a photo to work with
  => save attachment - DONE
- => CV api and gen thumbnails
- => CV api identify faces
- => caymanjs
+ => CV api and gen thumbnails - PUSH
+ => caymanjs - DONE
  => carousel - DONE
 
  Tell me a short story about the card!
@@ -27,16 +26,21 @@
 
 
 var restify = require('restify');
+var os = require('os')
 var fs = require('fs')
 var request = require('request');
+var uuid = require('node-uuid')
 
 var builder = require('botbuilder');
 var cogs = require('./CSServices')
 var imgs = require('./ImgServices')
 
+
+var Caman = require('caman').Caman
 var Lob = require('lob')('test_8f40bb86374ba8280a9c9293b26483b42de');
 // live_d0836a2d434e929d1fb8e592fa944af6fe9
 
+var url_base = ''
 
 //=========================================================
 // Bot Setup
@@ -107,34 +111,36 @@ bot.use(builder.Middleware.dialogVersion({ version: 1.0, resetCommand: /^reset/i
 
 bot.dialog('/', [
     function (session) {
+        // clear memory
+        session.userData = {}
+
         // Send a greeting and start the menu.
-        // var card = new builder.HeroCard(session)
-        //     .title("")
-        //     .text("I can send post")
-        //     .images([
-        //          builder.CardImage.create(session, "http://docs.botframework.com/images/demo_bot_image.png")
-        //     ]);
-        // var msg = new builder.Message(session).attachments([card]);
-        // session.send(msg);
-        session.send("I can send a postcard for you to anywhere. Get started?");
-        session.beginDialog('/address')
-        // builder.Prompts.confirm(session);
+        var card = new builder.HeroCard(session)
+            .title("Yar! I be the Jolly Pirate Post Master!")
+            .text("I can send a postcard to anywhere, across the land and all seven seas!")
+            .images([
+                 builder.CardImage.create(session, "http://i.imgur.com/dgl17bl.png")
+            ]);
+        var msg = new builder.Message(session).attachments([card]);
+        session.send(msg);
+        session.replaceDialog('/photo')
     },
-    function (session, results) {
-        if (results && results.resumed == builder.ResumeReason.completed) {
-            session.send("You chose '%s'", results.response ? 'yes' : 'no');
-            session.beginDialog('/photo')
-        } else {
-            session.endDialog("Goodbye");
-        }
-    }
+    // function (session, results) {
+    //     if (results && results.resumed == builder.ResumeReason.completed) {
+    //         session.send("You chose '%s'", results.response ? 'yes' : 'no');
+    //         session.endDialog('goodbye')
+    //     } else {
+    //         session.endDialog("Goodbye");
+    //     }
+    // }
 ]);
 
 
 // ATTACHMENTS
 bot.dialog('/photo', [
     function (session) {
-        builder.Prompts.attachment(session, "Give me a photo to work with.");
+        session.send("Let's get started!")
+        builder.Prompts.attachment(session, "First, give me a photo to work with!");
     },
     function (session, results) {
         if (results && results.response) {
@@ -152,12 +158,12 @@ bot.dialog('/photo', [
                         var imagePath = 'https://c7d36c61.ngrok.io/' + 'files/'+options.url.split('/')[5]+'.jpg'
                         console.log('File saved', imagePath)
                         session.userData.imageUrl = imagePath
-                        session.send('Your file is at %s', imagePath)
+                        session.send('This be a mighty fine photo!')
+                        session.send(session.userData.imageUrl)
+                        session.replaceDialog('/message');
                     })
                 })
-                // msg.addAttachment(attachment);
             });
-            session.replaceDialog('/carousel');
         } else {
             session.endDialog("You canceled.");
         }    
@@ -165,100 +171,132 @@ bot.dialog('/photo', [
 ])
 
 
-// function downloadFile(connector) {
-//     return {
-//         dialog: function (session, next) {
-//             session.downloadFile = function downloadFile(url, filename, cb) {
-//                 connector.getAccessToken(function (err, token) {
-//                     if (!err && token) {
-//                         var headers = {};
-//                         if (url.indexOf('skype.com/')) {
-//                             headers['Authorization'] = 'Bearer ' + token;
-//                         }
-//                         request({
-//                             url: url,
-//                             headers: headers
-//                         }).pipe(fs.createWriteStream(filename)).on('close', cb);
-//                     } else {
-//                         cb(err);
-//                     }
-//                 });
-//             }
-//             next();
-//         }
-//     };
-// }
-
-// bot.dialog('/upload', [ 
-//     function (session) { 
-//         builder.Prompts.attachment(session, "Send me an image and I'll save it locally.");
-//     }, 
-//     function (session, results) {
-//         if (results && results.response) {
-//             var attachment = results.response[0];
-//             session.send("I'm saving your file now");
-//             session.downloadFile(attachment.contentUrl, "file1", function (err) {
-//                 if (!err) {
-//                     session.endDialog("1 file saved.");
-//                 } else {
-//                     session.endDialog("Oops... Something went wrong: %s", err.toString());    
-//                 }
-//             });
-//         } else {
-//             session.endDialog("You canceled.")
-//         }
-//     }
-// ]);
-
-
-
-bot.dialog('/sentiment', [
+// PROMPT TEXT and TEXT ANALYTICS API
+bot.dialog('/message', [
     function (session) {
-        builder.Prompts.text(session, 'tell me how you feel about an experience')
+        builder.Prompts.text(session, "Next you tell me how you feel about the photo. Don't be too chatty now.")
     },
     function (session, results) {
         if (results && results.response) {
+            // save message
+            session.userData.message = results.response
+
+            // find out how you feel
             cogs.Sentiment(results.response, function (reply) {
                 console.log('RESPONSE FROM SENTIMENT CHECK:', reply)
                 if (!reply.error) {
                         console.log(reply.documents[0].score)
                     if (reply.documents[0].score > 0.5) {
-                        session.send("Sounds awesome! I am very glad for you!")
+                        session.userData.feeling = 'happy'
+                        session.send("Yar! That sounds like mighty good fun! I am very %s for you!", session.userData.feeling)
                     } else {
-                        session.send("I'm sorry! That doesn't sound very good at all.")
+                        session.userData.feeling = 'sad'
+                        session.send("Shiver me timbers! That doesn't sound very good at all. I feel %s with you.", session.userData.feeling)
                     }
+                    session.replaceDialog('/carousel');
+                    // session.endDialog('goodbye');
                 } else {
                     session.send("Got an error")
                 }
-                
-                session.endDialog('end')
             })
-        }
-    }
-])
-
-
-// PROMPT TEXT and TEXT ANALYTICS API
-bot.dialog('/story', [
-    function (session) {
-        builder.Prompts.text(session, "Tell me a sentence or two about the photo");
-    },
-    function (session, results) {
-        if (results && results.response) {
-            session.send("You entered '%s'", results.response);
-            session.userData.message = results.response
-            session.replaceDialog('/lob')
         } else {
-            session.endDialog('You canceled')
+            session.endDialog('You canceled.')
         }
-    }
+    },
 ])
+
+
+var happyFilters = [
+ "lomo",
+ "clarity",
+ "sunrise",
+ "glowingSun",
+ "love",
+]
+
+var okayFilters =[
+"crossProcess",
+ "orangePeel",
+ "sinCity",
+ "jarques",
+ "pinhole",
+ "oldBoot",
+ "herMajesty",
+ "concentrate"
+]
+
+ var sadFilters = [
+ "grungy",
+ "vintage",
+ "hazyDays",
+ "nostalgia",
+ "hemingway",
+];
+
+
+var applyFilter = function(imageUrl, filter) {
+ var id = uuid.v1();
+ var original = os.tmpdir() + "/" + id;
+ var filtered = id + ".jpg";
+ var filteredPath = "./files/" + filtered;
+ 
+ // Save the remote image file to the /tmp fs
+ download = request(imageUrl).pipe(fs.createWriteStream(original));
+ 
+ download.on('finish', function() {
+   // initialize CamanJS
+   Caman(original, function () {
+     // apply the filter
+     this.resize({width: 600});
+     this[filter]();
+     this.render(function () {
+       // save to the file system
+       this.save(filteredPath);
+       console.log('Saved: ', filtered);
+       // delete the temp file
+       fs.unlink(original, function(err) {});
+       console.log('https://c7d36c61.ngrok.io/' + 'files/' + filtered)
+       return ('https://c7d36c61.ngrok.io/' + 'files/' + filtered)
+     });
+   });
+ });
+};
+
+
+var rotateImage = function(imageUrl) {
+ // create a unique UUID for all of our video/gif processing
+ var id = uuid.v1();
+ 
+ var original = os.tmpdir() + "/" + id;
+ var rotated = id + ".jpg";
+ var rotatedPath = "./files/" + rotated;
+ 
+ // Save the remote image file to the /tmp fs
+ download = request(imageUrl).pipe(fs.createWriteStream(original));
+ 
+ download.on('finish', function() {
+   // initialize CamanJS
+   Caman(original, function () {
+     // apply the filter
+     this.resize({width: 600});
+     this[filter]();
+     this.render(function () {
+       // save to the file system
+       this.save(filteredPath);
+       console.log('Saved: ', filtered);
+       // delete the temp file
+       fs.unlink(original, function(err) {});
+       sendPhoto(url_base, filtered, from, to);
+     });
+   });
+ });
+};
 
 
 // CAROUSEL
 bot.dialog('/carousel', [
     function (session) {
-        session.send("You can pass a custom message to Prompts.choice() that will present the user with a carousel of cards to select from. Each card can even support multiple actions.");
+        session.send("Because of how you feel I am trying these photo filters. Which do you like?");
         
         // Ask the user to select an item from a carousel.
         var msg = new builder.Message(session)
@@ -339,7 +377,9 @@ bot.dialog('/carousel', [
                     item = "You want the sin City";
                     break;
             }
-            session.endDialog();
+            session.send(item)
+            // session.endDialog('goodbye');
+            session.replaceDialog('/address');
         } else {
             session.endDialog("You canceled.");
         }
@@ -381,10 +421,25 @@ bot.dialog('/address', [
     },
     function (session, results) {
         if (results && results.response) {
-            session.userData.name = results.response
-            builder.Prompts.text(session, "What country?")
-        } else {
-            session.endDialog("You canceled")
+            cogs.Spellcheck(results.response, function (reply) {
+                console.log('RESPONSE FROM SPELLCHECK:', reply)
+                // SPELL CHECKS
+                if (!reply.error) {
+                    if (reply != null) {
+                        session.send("Yar! I think you meant to say %s", reply)
+                        session.userData.name = reply
+                        builder.Prompts.text(session, "What country? In 2 letters plz")
+                    } else {
+                        session.send("You said %s", results.response)
+                        session.userData.name = results.response
+                        builder.Prompts.text(session, "What country? In 2 letters plz")
+                    }
+                } else {
+                    session.send("Got an error")
+                }
+                
+                session.replaceDialog('/sentiment')
+            })
         }
     },
     function (session, results) {
@@ -427,7 +482,8 @@ bot.dialog('/address', [
               address_line1: session.userData.address1,
               address_city: session.userData.city,
               address_state: session.userData.state,
-              address_zip: session.userData.zip
+              address_zip: session.userData.zip,
+              address_country: session.userData.country,
             }, function (err, res) {
               if (res) {
                 console.log(res)
@@ -439,7 +495,8 @@ bot.dialog('/address', [
 
                 console.log(session.userData)
 
-                session.endDialog("Works!");
+                session.send("Now we be ready!");
+                session.replaceDialog('/lob')
               } else {
                 session.endDialog("Failed! %s", err);
               }
@@ -453,10 +510,10 @@ bot.dialog('/address', [
 
 bot.dialog('/lob', [
     function (session) {
-        builder.Prompts.confirm(session, "Ready to send?");
+        builder.Prompts.confirm(session, "You be ready to send this postcard?");
     },
     function (session, results) {
-        if (results && results.resumed == builder.ResumeReason.completed) {
+        if (results.response) {
             
             var postcardTemplate = fs.readFileSync(__dirname + '/postcard.html').toString()
 
@@ -481,7 +538,8 @@ bot.dialog('/lob', [
             })
             .then(function (postcard) {
                 session.userData.postcardUrl = postcard.url
-                session.send('Here is your postcard preview %s', postcard.url)
+                session.send('Ayy, captain, here be a postcard preview: %s', postcard.url)
+                session.replaceDialog('/receipt')
             })
             .catch(function (errors) {
                 session.endDialog('Failed! Because %s', errors.message)
@@ -497,7 +555,7 @@ bot.dialog('/lob', [
 // RECEIPT
 bot.dialog('/receipt', [
     function (session) {
-        session.send("You can send a receipts for purchased good with both images and without...");
+        session.send("Now be the part you pay in gold pieces!");
         
         // Send a receipt with images
         // var msg = new builder.Message(session)
@@ -535,10 +593,23 @@ bot.dialog('/receipt', [
                     .total("$0.00")
             ]);
         session.send(msg)
-        session.replaceDialog('/refer');
+        session.replaceDialog('/goodbye');
     }
 ]);
 
+
+bot.dialog('/goodbye', [
+    function (session) {
+        builder.Prompts.confirm(session, "Yar! We are done. Do you want to send another postcard?");
+    },
+    function (session, results) {
+        if (results.response) {
+            session.replaceDialog("Yar! Alrighty then!")
+        } else {
+            session.endDialog("Yar! Goodbye ye landlubber!")    
+        }
+    }
+])
 
 bot.use({
     dialog: function (session, next) {
