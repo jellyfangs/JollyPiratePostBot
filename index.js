@@ -84,7 +84,7 @@ bot.dialog('/', [
         // var msg = new builder.Message(session).attachments([card]);
         // session.send(msg);
         session.send("I can send a postcard for you to anywhere. Get started?");
-        session.beginDialog('/carousel')
+        session.beginDialog('/lob')
         // builder.Prompts.confirm(session);
     },
     function (session, results) {
@@ -169,16 +169,11 @@ bot.dialog('/sentiment', [
  => text analytics api - DONE
 
  Where will the card go?
+ => address
  => lob api
-
- When do you want to send it?
- => prompt time - PUSH
 
  Great, here you are!
  => receipt - DONE
-
- Also, use this referral code
- => group chat - PUSH
 
 */
 
@@ -335,35 +330,96 @@ bot.dialog('/story', [
     }
 ])
 
-// LOB API
-bot.dialog('/lob', [
+// PROMPT ADDRESS
+bot.dialog('/address', [
     function (session) {
-        builder.Prompts.text(session, "What is the address?");
+        builder.Prompts.text(session, "Who do you want to send it to?")
     },
     function (session, results) {
         if (results && results.response) {
-            session.send("You entered '%s'", results.response);
-            session.replaceDialog('/time')
+            builder.Prompts.text(session, "What country? United States or International?")
+        } else {
+            session.endDialog("You canceled")
+        }
+    },
+    function (session, results) {
+        if (results && results.response) {
+            builder.Prompts.text(session, "What street?")
+        } else {
+            session.endDialog("You canceled")
+        }  
+    },
+    function (session, results) {
+        if (results && results.response) {
+            builder.Prompts.text(session, "What city?")
+        } else {
+            session.endDialog("You canceled")
+        }
+    },
+    function (session, results) {
+        if (results && results.response) {
+            builder.Prompts.text(session, "What state?")
+        } else {
+            session.endDialog("You canceled")
+        }
+    },
+    function (session, results) {
+        if (results && results.response) {
+            builder.Prompts.text(session, "What postal code?")
+        } else {
+            session.endDialog("You canceled")
+        }
+    },
+    function (session, results) {
+        session.endDialog("Cool.");
+    }
+])
+
+
+var Lob = require('lob')('test_8f40bb86374ba8280a9c9293b26483b42de');
+// live_d0836a2d434e929d1fb8e592fa944af6fe9
+
+bot.dialog('/lob', [
+    function (session) {
+        builder.Prompts.confirm(session, "Ready to send?");
+    },
+    function (session, results) {
+        if (results && results.resumed == builder.ResumeReason.completed) {
+            
+            var postcardTemplate = fs.readFileSync(__dirname + '/postcard.html').toString()
+
+            return Lob.addresses.create({
+                name: 'TEST TEST',
+                address_line1: '1 INFINITE LOOP',
+                address_city: 'CUPERTINO',
+                address_state: 'CA',
+                address_zip: '95129',
+                address_country: 'US'
+            })
+            .then(function (address) {
+                return Lob.postcards.create({
+                    description: 'Skype Postcard',
+                    to: address.id,
+                    front: postcardTemplate,
+                    message: 'HELLO WORLD',
+                    data: {
+                        image: 'https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg'
+                    }
+                })
+            })
+            .then(function (postcard) {
+                session.send('Here is your postcard preview %s', postcard.url)
+            })
+            .catch(function (errors) {
+                session.endDialog('Failed! Because %s', errors.message)
+            })
         } else {
             session.endDialog('You canceled')
         }
     }
 ])
 
-// PROMPT TIME
-bot.dialog('/time', [
-    function (session) {
-        builder.Prompts.time(session, "When do you want to send the postcard?");
-    },
-    function (session, results) {
-        if (results && results.response) {
-            session.send("You entered '%s'", JSON.stringify(results.response));
-            session.replaceDialog('/receipt')
-        } else {
-            session.endDialog('You canceled')
-        }
-    }
-])
+
 
 // RECEIPT
 bot.dialog('/receipt', [

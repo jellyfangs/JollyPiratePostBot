@@ -12,6 +12,7 @@
     "botbuilder": "https://aka.ms/hackathon-builder-npm",
     "http": "0.0.0",
     "https": "^1.0.0",
+    "lob": "^3.9.0",
     "restify": "^4.1.1",
     "skype-sdk": "0.0.0"
   }
