@@ -1,9 +1,42 @@
+/*
+
+ Welcome to Jolly Pirate Post!
+
+ I can send a postcard for you to anywhere. Get started?
+
+ Give me a photo to work with
+ => save attachment - DONE
+ => CV api and gen thumbnails
+ => CV api identify faces
+ => caymanjs
+ => carousel - DONE
+
+ Tell me a short story about the card!
+ => bing spell check api - DONE
+ => text analytics api - DONE
+
+ Where will the card go?
+ => address - DONE
+ => lob api - DONE
+
+ Great, here you are!
+ => receipt - DONE
+
+*/
+
+
+
 var restify = require('restify');
 var fs = require('fs')
+var request = require('request');
 
 var builder = require('botbuilder');
 var cogs = require('./CSServices')
 var imgs = require('./ImgServices')
+
+var Lob = require('lob')('test_8f40bb86374ba8280a9c9293b26483b42de');
+// live_d0836a2d434e929d1fb8e592fa944af6fe9
+
 
 //=========================================================
 // Bot Setup
@@ -84,7 +117,7 @@ bot.dialog('/', [
         // var msg = new builder.Message(session).attachments([card]);
         // session.send(msg);
         session.send("I can send a postcard for you to anywhere. Get started?");
-        session.beginDialog('/lob')
+        session.beginDialog('/address')
         // builder.Prompts.confirm(session);
     },
     function (session, results) {
@@ -97,30 +130,86 @@ bot.dialog('/', [
     }
 ]);
 
-bot.dialog('/spellcheck', [
+
+// ATTACHMENTS
+bot.dialog('/photo', [
     function (session) {
-        builder.Prompts.text(session, 'tell me something wrong')
+        builder.Prompts.attachment(session, "Give me a photo to work with.");
     },
     function (session, results) {
         if (results && results.response) {
-            cogs.Spellcheck(results.response, function (reply) {
-                console.log('RESPONSE FROM SPELLCHECK:', reply)
-                // SPELL CHECKS
-                if (!reply.error) {
-                    if (reply != null) {
-                        session.send("You meant to say %s", reply)
-                    } else {
-                        session.send("You said %s", results.response)
-                    }
-                } else {
-                    session.send("Got an error")
-                }
-                
-                session.replaceDialog('/sentiment')
-            })
-        }
+            var msg = new builder.Message(session)
+                .ntext("I got %d attachment.", "I got %d attachments.", results.response.length);
+            results.response.forEach(function (attachment) {
+                var options = {
+                    method: 'GET',
+                    url: attachment.contentUrl,
+                    encoding: 'binary',
+                };
+                connector.authenticatedRequest(options, function (err, response) {
+                    fs.writeFile('files/'+options.url.split('/')[5]+'.jpg', response.body, 'binary', function(err) {
+                        if (err) throw err
+                        var imagePath = 'https://c7d36c61.ngrok.io/' + 'files/'+options.url.split('/')[5]+'.jpg'
+                        console.log('File saved', imagePath)
+                        session.userData.imageUrl = imagePath
+                        session.send('Your file is at %s', imagePath)
+                    })
+                })
+                // msg.addAttachment(attachment);
+            });
+            session.replaceDialog('/carousel');
+        } else {
+            session.endDialog("You canceled.");
+        }    
     }
 ])
+
+
+// function downloadFile(connector) {
+//     return {
+//         dialog: function (session, next) {
+//             session.downloadFile = function downloadFile(url, filename, cb) {
+//                 connector.getAccessToken(function (err, token) {
+//                     if (!err && token) {
+//                         var headers = {};
+//                         if (url.indexOf('skype.com/')) {
+//                             headers['Authorization'] = 'Bearer ' + token;
+//                         }
+//                         request({
+//                             url: url,
+//                             headers: headers
+//                         }).pipe(fs.createWriteStream(filename)).on('close', cb);
+//                     } else {
+//                         cb(err);
+//                     }
+//                 });
+//             }
+//             next();
+//         }
+//     };
+// }
+
+// bot.dialog('/upload', [ 
+//     function (session) { 
+//         builder.Prompts.attachment(session, "Send me an image and I'll save it locally.");
+//     }, 
+//     function (session, results) {
+//         if (results && results.response) {
+//             var attachment = results.response[0];
+//             session.send("I'm saving your file now");
+//             session.downloadFile(attachment.contentUrl, "file1", function (err) {
+//                 if (!err) {
+//                     session.endDialog("1 file saved.");
+//                 } else {
+//                     session.endDialog("Oops... Something went wrong: %s", err.toString());    
+//                 }
+//             });
+//         } else {
+//             session.endDialog("You canceled.")
+//         }
+//     }
+// ]);
+
 
 
 bot.dialog('/sentiment', [
@@ -149,85 +238,22 @@ bot.dialog('/sentiment', [
 ])
 
 
-/*
-
- Welcome to Jolly Pirate Post!
-
- I can send a postcard for you to anywhere. Get started?
-
- Give me a photo to work with
- => save attachment - DONE
- => computer vision api - PUSH
- => emotion api - PUSH
- 
- Which card do you like?
- => caymanjs
- => carousel - DONE
-
- Tell me a short story about the card!
- => bing spell check api - DONE
- => text analytics api - DONE
-
- Where will the card go?
- => address
- => lob api
-
- Great, here you are!
- => receipt - DONE
-
-*/
-
-
-// ATTACHMENTS
-bot.dialog('/photo', [
+// PROMPT TEXT and TEXT ANALYTICS API
+bot.dialog('/story', [
     function (session) {
-        builder.Prompts.attachment(session, "Give me a photo to work with.");
-    },
-    function (session, results) {
-        if (results && results.response) {
-            var msg = new builder.Message(session)
-                .ntext("I got %d attachment.", "I got %d attachments.", results.response.length);
-            results.response.forEach(function (attachment) {
-                var options = {
-                    method: 'GET',
-                    url: attachment.contentUrl,
-                    encoding: 'binary',
-                };
-                connector.authenticatedRequest(options, function (err, response) {
-                    fs.writeFile('files/'+options.url.split('/')[5]+'.jpg', response.body, 'binary', function(err) {
-                        if (err) throw err
-                        console.log('File savd')
-                        var imagePath = 'https://c7d36c61.ngrok.io/' + 'files/'+options.url.split('/')[5]+'.jpg'
-                        session.send('Your file is at %s', imagePath)
-                    })
-                })
-                // msg.addAttachment(attachment);
-            });
-            session.replaceDialog('/carousel');
-        } else {
-            session.endDialog("You canceled.");
-        }    
-    }
-])
-
-
-
-
-
-// EMOTION API
-bot.dialog('/emotion', [
-    function (session) {
-        builder.Prompts.text(session, "How do you feel today?");
+        builder.Prompts.text(session, "Tell me a sentence or two about the photo");
     },
     function (session, results) {
         if (results && results.response) {
             session.send("You entered '%s'", results.response);
-            session.replaceDialog('/carousel')
+            session.userData.message = results.response
+            session.replaceDialog('/lob')
         } else {
             session.endDialog('You canceled')
         }
     }
 ])
+
 
 // CAROUSEL
 bot.dialog('/carousel', [
@@ -240,52 +266,52 @@ bot.dialog('/carousel', [
             .attachmentLayout(builder.AttachmentLayout.carousel)
             .attachments([
                 new builder.HeroCard(session)
-                    .title("Original")
+                    // .title("Original")
                     .images([
-                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")
-                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")),
+                        builder.CardImage.create(session, session.userData.imageUrl)
+                            .tap(builder.CardAction.showImage(session, session.userData.imageUrl)),
                     ])
                     .buttons([
-                        builder.CardAction.imBack(session, "select:100", "Stick with this")
+                        builder.CardAction.imBack(session, "select:original", "Stick with original")
                     ]),
                 new builder.HeroCard(session)
-                    .title("Vintage")
+                    // .title("Vintage")
                     .images([
-                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")
-                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")),
+                        builder.CardImage.create(session, session.userData.imageUrl)
+                            .tap(builder.CardAction.showImage(session, session.userData.imageUrl)),
                     ])
                     .buttons([
-                        builder.CardAction.imBack(session, "select:101", "Choose this filter")
+                        builder.CardAction.imBack(session, "select:vintage", "Apply Vintage filter")
                     ]),
                 new builder.HeroCard(session)
-                    .title("Lomo")
+                    // .title("Lomo")
                     .images([
-                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")
-                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg"))
+                        builder.CardImage.create(session, session.userData.imageUrl)
+                            .tap(builder.CardAction.showImage(session, session.userData.imageUrl))
                     ])
                     .buttons([
-                        builder.CardAction.imBack(session, "select:102", "Choose this filter")
+                        builder.CardAction.imBack(session, "select:lomo", "Apply Lomo filter")
                     ]),
                 new builder.HeroCard(session)
-                    .title("Clarity")
+                    // .title("Clarity")
                     .images([
-                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")
-                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg"))
+                        builder.CardImage.create(session, session.userData.imageUrl)
+                            .tap(builder.CardAction.showImage(session, session.userData.imageUrl))
                     ])
                     .buttons([
-                        builder.CardAction.imBack(session, "select:103", "Choose this filter")
+                        builder.CardAction.imBack(session, "select:clarity", "Apply Clarity filter")
                     ]),
                 new builder.HeroCard(session)
-                    .title("Sin City")
+                    // .title("Sin City")
                     .images([
-                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")
-                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg"))
+                        builder.CardImage.create(session, session.userData.imageUrl)
+                            .tap(builder.CardAction.showImage(session, session.userData.imageUrl))
                     ])
                     .buttons([
-                        builder.CardAction.imBack(session, "select:104", "Choose this filter")
+                        builder.CardAction.imBack(session, "select:sinCity", "Apply Sin City filter")
                     ]),
             ]);
-        builder.Prompts.choice(session, msg, "select:100|select:101|select:102");
+        builder.Prompts.choice(session, msg, "select:original|select:vintage|select:lomo|select:clarity|select:sinCity");
     },
     function (session, results) {
         if (results.response) {
@@ -297,14 +323,20 @@ bot.dialog('/carousel', [
                     break;
             }
             switch (kvPair[1]) {
-                case '100':
-                    item = "the <b>Space Needle</b>";
+                case 'original':
+                    item = "You want the original";
                     break;
-                case '101':
-                    item = "<b>Pikes Place Market</b>";
+                case 'vintage':
+                    item = "You want the Vintage";
                     break;
-                case '101':
-                    item = "the <b>EMP Museum</b>";
+                case 'lomo':
+                    item = "You want the Lomo";
+                    break;
+                case 'clarity':
+                    item = "You want the Clarity";
+                    break;
+                case 'sinCity':
+                    item = "You want the sin City";
                     break;
             }
             session.endDialog();
@@ -315,20 +347,32 @@ bot.dialog('/carousel', [
 ]);
 
 
-// PROMPT TEXT and TEXT ANALYTICS API
-bot.dialog('/story', [
+
+bot.dialog('/spellcheck', [
     function (session) {
-        builder.Prompts.text(session, "Tell me a short story about the photo");
+        builder.Prompts.text(session, 'tell me something wrong')
     },
     function (session, results) {
         if (results && results.response) {
-            session.send("You entered '%s'", results.response);
-            session.replaceDialog('/lob')
-        } else {
-            session.endDialog('You canceled')
+            cogs.Spellcheck(results.response, function (reply) {
+                console.log('RESPONSE FROM SPELLCHECK:', reply)
+                // SPELL CHECKS
+                if (!reply.error) {
+                    if (reply != null) {
+                        session.send("You meant to say %s", reply)
+                    } else {
+                        session.send("You said %s", results.response)
+                    }
+                } else {
+                    session.send("Got an error")
+                }
+                
+                session.replaceDialog('/sentiment')
+            })
         }
     }
 ])
+
 
 // PROMPT ADDRESS
 bot.dialog('/address', [
@@ -337,13 +381,15 @@ bot.dialog('/address', [
     },
     function (session, results) {
         if (results && results.response) {
-            builder.Prompts.text(session, "What country? United States or International?")
+            session.userData.name = results.response
+            builder.Prompts.text(session, "What country?")
         } else {
             session.endDialog("You canceled")
         }
     },
     function (session, results) {
         if (results && results.response) {
+            session.userData.country = results.response
             builder.Prompts.text(session, "What street?")
         } else {
             session.endDialog("You canceled")
@@ -351,6 +397,7 @@ bot.dialog('/address', [
     },
     function (session, results) {
         if (results && results.response) {
+            session.userData.address1 = results.response
             builder.Prompts.text(session, "What city?")
         } else {
             session.endDialog("You canceled")
@@ -358,6 +405,7 @@ bot.dialog('/address', [
     },
     function (session, results) {
         if (results && results.response) {
+            session.userData.city = results.response
             builder.Prompts.text(session, "What state?")
         } else {
             session.endDialog("You canceled")
@@ -365,19 +413,43 @@ bot.dialog('/address', [
     },
     function (session, results) {
         if (results && results.response) {
+            session.userData.state = results.response
             builder.Prompts.text(session, "What postal code?")
         } else {
             session.endDialog("You canceled")
         }
     },
     function (session, results) {
-        session.endDialog("Cool.");
+        if (results && results.response) {
+            session.userData.zip = results.response
+
+            Lob.verification.verify({
+              address_line1: session.userData.address1,
+              address_city: session.userData.city,
+              address_state: session.userData.state,
+              address_zip: session.userData.zip
+            }, function (err, res) {
+              if (res) {
+                console.log(res)
+                session.userData.address1 = res.address.address_line1
+                session.userData.city = res.address.address_city
+                session.userData.state = res.address.address_state
+                session.userData.zip = res.address.address_zip
+                session.userData.country = res.address.address_country
+
+                console.log(session.userData)
+
+                session.endDialog("Works!");
+              } else {
+                session.endDialog("Failed! %s", err);
+              }
+            });
+        } else {
+            session.endDialog("Bye.");
+        }
     }
 ])
 
-
-var Lob = require('lob')('test_8f40bb86374ba8280a9c9293b26483b42de');
-// live_d0836a2d434e929d1fb8e592fa944af6fe9
 
 bot.dialog('/lob', [
     function (session) {
@@ -389,25 +461,26 @@ bot.dialog('/lob', [
             var postcardTemplate = fs.readFileSync(__dirname + '/postcard.html').toString()
 
             return Lob.addresses.create({
-                name: 'TEST TEST',
-                address_line1: '1 INFINITE LOOP',
-                address_city: 'CUPERTINO',
-                address_state: 'CA',
-                address_zip: '95129',
-                address_country: 'US'
+                name: session.userData.name,
+                address_line1: session.userData.address1,
+                address_city: session.userData.city,
+                address_state: session.userData.state,
+                address_zip: session.userData.zip,
+                address_country: session.userData.country,
             })
             .then(function (address) {
                 return Lob.postcards.create({
                     description: 'Skype Postcard',
                     to: address.id,
                     front: postcardTemplate,
-                    message: 'HELLO WORLD',
+                    message: session.userData.message,
                     data: {
-                        image: 'https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg'
+                        image: session.userData.imageUrl
                     }
                 })
             })
             .then(function (postcard) {
+                session.userData.postcardUrl = postcard.url
                 session.send('Here is your postcard preview %s', postcard.url)
             })
             .catch(function (errors) {
@@ -427,78 +500,91 @@ bot.dialog('/receipt', [
         session.send("You can send a receipts for purchased good with both images and without...");
         
         // Send a receipt with images
-        var msg = new builder.Message(session)
-            .attachments([
-                new builder.ReceiptCard(session)
-                    .title("Recipient's Name")
-                    .items([
-                        builder.ReceiptItem.create(session, "$22.00", "EMP Museum").image(builder.CardImage.create(session, "https://upload.wikimedia.org/wikipedia/commons/a/a0/Night_Exterior_EMP.jpg")),
-                        builder.ReceiptItem.create(session, "$22.00", "Space Needle").image(builder.CardImage.create(session, "https://upload.wikimedia.org/wikipedia/commons/7/7c/Seattlenighttimequeenanne.jpg"))
-                    ])
-                    .facts([
-                        builder.Fact.create(session, "1234567898", "Order Number"),
-                        builder.Fact.create(session, "VISA 4076", "Payment Method"),
-                        builder.Fact.create(session, "WILLCALL", "Delivery Method")
-                    ])
-                    .tax("$4.40")
-                    .total("$48.40")
-            ]);
-        session.send(msg);
+        // var msg = new builder.Message(session)
+        //     .attachments([
+        //         new builder.ReceiptCard(session)
+        //             .title("Recipient's Name")
+        //             .items([
+        //                 builder.ReceiptItem.create(session, "$22.00", "EMP Museum").image(builder.CardImage.create(session, "https://upload.wikimedia.org/wikipedia/commons/a/a0/Night_Exterior_EMP.jpg")),
+        //                 builder.ReceiptItem.create(session, "$22.00", "Space Needle").image(builder.CardImage.create(session, "https://upload.wikimedia.org/wikipedia/commons/7/7c/Seattlenighttimequeenanne.jpg"))
+        //             ])
+        //             .facts([
+        //                 builder.Fact.create(session, "1234567898", "Order Number"),
+        //                 builder.Fact.create(session, "VISA 4076", "Payment Method"),
+        //                 builder.Fact.create(session, "WILLCALL", "Delivery Method")
+        //             ])
+        //             .tax("$4.40")
+        //             .total("$48.40")
+        //     ]);
+        // session.send(msg);
 
         // Send a receipt without images
         msg = new builder.Message(session)
             .attachments([
                 new builder.ReceiptCard(session)
-                    .title("Recipient's Name")
-                    .items([
-                        builder.ReceiptItem.create(session, "$22.00", "EMP Museum"),
-                        builder.ReceiptItem.create(session, "$22.00", "Space Needle")
-                    ])
+                    .title("Jolly Pirate Post ⚓️📬")
                     .facts([
                         builder.Fact.create(session, "1234567898", "Order Number"),
-                        builder.Fact.create(session, "VISA 4076", "Payment Method"),
-                        builder.Fact.create(session, "WILLCALL", "Delivery Method")
+                        builder.Fact.create(session, "PROMO", "Payment Method"),
+                        builder.Fact.create(session, "MAIL", "Delivery Method")
                     ])
-                    .tax("$4.40")
-                    .total("$48.40")
+                    .items([
+                        builder.ReceiptItem.create(session, "$0.00", "Postcard"),
+                    ])
+                    .tax("$0.00")
+                    .total("$0.00")
             ]);
         session.send(msg)
         session.replaceDialog('/refer');
     }
 ]);
 
-// GROUP CHAT
-bot.dialog('/refer', [
-    function (session) {
-        session.endDialog("Here you can refer a friend")
-    }
-])
 
-bot.on('conversationUpdate', function (message) {
-   // Check for group conversations
-    if (message.address.conversation.isGroup) {
-        // Send a hello message when bot is added
-        if (message.membersAdded) {
-            message.membersAdded.forEach(function (identity) {
-                if (identity.id === message.address.bot.id) {
-                    var reply = new builder.Message()
-                            .address(message.address)
-                            .text("Hello everyone!");
-                    bot.send(reply);
-                }
-            });
-        }
-
-        // Send a goodbye message when bot is removed
-        if (message.membersRemoved) {
-            message.membersRemoved.forEach(function (identity) {
-                if (identity.id === message.address.bot.id) {
-                    var reply = new builder.Message()
-                        .address(message.address)
-                        .text("Goodbye");
-                    bot.send(reply);
-                }
-            });
+bot.use({
+    dialog: function (session, next) {
+        if (/^deleteprofile/i.test(session.message.text)) {
+            session.userData = {};
+            session.endConversation("Stored data deleted.");
+        } else {
+            next();
         }
     }
 });
+
+
+
+// // GROUP CHAT
+// bot.dialog('/refer', [
+//     function (session) {
+//         session.endDialog("Here you can refer a friend")
+//     }
+// ])
+
+// bot.on('conversationUpdate', function (message) {
+//    // Check for group conversations
+//     if (message.address.conversation.isGroup) {
+//         // Send a hello message when bot is added
+//         if (message.membersAdded) {
+//             message.membersAdded.forEach(function (identity) {
+//                 if (identity.id === message.address.bot.id) {
+//                     var reply = new builder.Message()
+//                             .address(message.address)
+//                             .text("Hello everyone!");
+//                     bot.send(reply);
+//                 }
+//             });
+//         }
+
+//         // Send a goodbye message when bot is removed
+//         if (message.membersRemoved) {
+//             message.membersRemoved.forEach(function (identity) {
+//                 if (identity.id === message.address.bot.id) {
+//                     var reply = new builder.Message()
+//                         .address(message.address)
+//                         .text("Goodbye");
+//                     bot.send(reply);
+//                 }
+//             });
+//         }
+//     }
+// });
