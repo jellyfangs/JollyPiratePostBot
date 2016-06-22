@@ -54,6 +54,53 @@ function replaceOffset(string, checked) {
     })
     return newString
 	} else {
-		return false
+		return null
 	}
+}
+
+exports.Sentiment = function Sentiment(string, callback) {
+	console.log('SENTIMENT CHECK:', string)
+
+	var post_option = {
+		hostname: 'westus.api.cognitive.microsoft.com',
+		port: 443,
+		path: '/text/analytics/v2.0/sentiment',
+		method: 'POST'
+	};
+
+	post_option.headers = {
+		'Content-Type' : 'application/json',
+		'Ocp-Apim-Subscription-Key' : '087de4eafec345099c6a7db4f5372e8b'
+	};
+
+	var post_data = {
+	  "documents": [
+	    {
+	      "language": "en",
+	      "id": "string",
+	      "text": string
+	    }
+	  ]
+	}
+
+	console.log('CALLING BING:', post_option, post_data)
+
+	var post_req = https.request(post_option, function(res){
+	  var _data="";
+		res.on('data', function(buffer){
+			_data += buffer;
+		});
+		 
+		 // end callback
+		res.on('end', function(){
+			// console.log("RESPONSE: ",_data);
+			callback(JSON.parse(_data))
+		})
+	})
+
+	post_req.write(JSON.stringify(post_data), encoding='utf8')
+	post_req.end()
+	post_req.on('error', function(e) {
+		console.log('problem with request: ' + e.message)
+	})	
 }

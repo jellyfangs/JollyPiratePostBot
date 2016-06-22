@@ -77,20 +77,20 @@ bot.dialog('/', [
         // var msg = new builder.Message(session).attachments([card]);
         // session.send(msg);
         session.send("I can send a postcard for you to anywhere. Get started?");
-        session.beginDialog('/start')
+        session.beginDialog('/sentiment')
         // builder.Prompts.confirm(session);
     },
     function (session, results) {
         if (results && results.resumed == builder.ResumeReason.completed) {
             session.send("You chose '%s'", results.response ? 'yes' : 'no');
-            session.beginDialog('/start')
+            session.beginDialog('/photos')
         } else {
             session.endDialog("Goodbye");
         }
     }
 ]);
 
-bot.dialog('/start', [
+bot.dialog('/spellcheck', [
     function (session) {
         builder.Prompts.text(session, 'tell me something wrong')
     },
@@ -104,6 +104,32 @@ bot.dialog('/start', [
                         session.send("You meant to say %s", reply)
                     } else {
                         session.send("You said %s", results.response)
+                    }
+                } else {
+                    session.send("Got an error")
+                }
+                
+                session.replaceDialog('/sentiment')
+            })
+        }
+    }
+])
+
+
+bot.dialog('/sentiment', [
+    function (session) {
+        builder.Prompts.text(session, 'tell me how you feel about an experience')
+    },
+    function (session, results) {
+        if (results && results.response) {
+            cogs.Sentiment(results.response, function (reply) {
+                console.log('RESPONSE FROM SENTIMENT CHECK:', reply)
+                if (!reply.error) {
+                        console.log(reply.documents[0].score)
+                    if (reply.documents[0].score > 0.5) {
+                        session.send("Sounds awesome! I am very glad for you!")
+                    } else {
+                        session.send("I'm sorry! That doesn't sound very good at all.")
                     }
                 } else {
                     session.send("Got an error")
@@ -124,24 +150,21 @@ bot.dialog('/start', [
 
  Give me a photo to work with
  => computer vision api
-
- How do you feel today?
  => emotion api
  
-
  Which card do you like?
+ => caymanjs
  => carousel
 
  Tell me a short story about the card!
  => bing spell check api - DONE
-
- => text analytics api
+ => text analytics api - DONE
 
  Where will the card go?
  => lob api
 
  When do you want to send it?
- => prompt time
+ => prompt time - PUSH
 
  Great, here you are!
  => receipt - DONE
