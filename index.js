@@ -1,7 +1,9 @@
 var restify = require('restify');
-var builder = require('botbuilder');
+var fs = require('fs')
 
+var builder = require('botbuilder');
 var cogs = require('./CSServices')
+var imgs = require('./ImgServices')
 
 //=========================================================
 // Bot Setup
@@ -12,7 +14,7 @@ var connector = new builder.ChatConnector({
     // appId: process.env.MICROSOFT_APP_ID,
     // appPassword: process.env.MICROSOFT_APP_PASSWORD,
     // stateEndpoint: process.env.STATE_ENDPOINT
-		appId: '7bfab6b5-c856-4027-9709-6034e9dbc451',
+	appId: '7bfab6b5-c856-4027-9709-6034e9dbc451',
     appPassword: 'aQBE2rYGN51oXMC2mhqLTxK',
 });
 
@@ -21,6 +23,11 @@ var server = restify.createServer();
 server.get('/', function (req, res) {
 	res.send('hello i am a chatbot')
 });
+
+server.get(/\/files\/?.*/, restify.serveStatic({
+    directory: __dirname
+}));
+
 server.post('/api/messages', connector.verifyBotFramework(), connector.listen());
 server.listen(process.env.PORT || 3978, function () {
    console.log('%s listening to %s', server.name, server.url); 
@@ -77,13 +84,13 @@ bot.dialog('/', [
         // var msg = new builder.Message(session).attachments([card]);
         // session.send(msg);
         session.send("I can send a postcard for you to anywhere. Get started?");
-        session.beginDialog('/sentiment')
+        session.beginDialog('/photo')
         // builder.Prompts.confirm(session);
     },
     function (session, results) {
         if (results && results.resumed == builder.ResumeReason.completed) {
             session.send("You chose '%s'", results.response ? 'yes' : 'no');
-            session.beginDialog('/photos')
+            session.beginDialog('/photo')
         } else {
             session.endDialog("Goodbye");
         }
@@ -149,8 +156,9 @@ bot.dialog('/sentiment', [
  I can send a postcard for you to anywhere. Get started?
 
  Give me a photo to work with
- => computer vision api
- => emotion api
+ => save attachment - DONE
+ => computer vision api - PUSH
+ => emotion api - PUSH
  
  Which card do you like?
  => caymanjs
@@ -185,14 +193,29 @@ bot.dialog('/photo', [
             var msg = new builder.Message(session)
                 .ntext("I got %d attachment.", "I got %d attachments.", results.response.length);
             results.response.forEach(function (attachment) {
-                msg.addAttachment(attachment);    
+                var options = {
+                    method: 'GET',
+                    url: attachment.contentUrl,
+                    encoding: 'binary',
+                };
+                connector.authenticatedRequest(options, function (err, response) {
+                    fs.writeFile('files/'+options.url.split('/')[5]+'.jpg', response.body, 'binary', function(err) {
+                        if (err) throw err
+                        console.log('File savd')
+                    })
+                })
+                // imgs.getAttachment(connector.authenticatedRequest, attachment.contentUrl)
+                // msg.addAttachment(attachment);
             });
-            session.replaceDialog('/emotion');
+            session.endDialog('That is really cool');
         } else {
             session.endDialog("You canceled.");
         }    
     }
 ])
+
+
+
 
 // EMOTION API
 bot.dialog('/emotion', [

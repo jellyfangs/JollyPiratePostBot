@@ -6,3 +6,4 @@
 *.txt
 *.exe
 .env
+/files/
