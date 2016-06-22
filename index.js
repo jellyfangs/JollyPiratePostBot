@@ -84,7 +84,7 @@ bot.dialog('/', [
         // var msg = new builder.Message(session).attachments([card]);
         // session.send(msg);
         session.send("I can send a postcard for you to anywhere. Get started?");
-        session.beginDialog('/photo')
+        session.beginDialog('/carousel')
         // builder.Prompts.confirm(session);
     },
     function (session, results) {
@@ -162,7 +162,7 @@ bot.dialog('/sentiment', [
  
  Which card do you like?
  => caymanjs
- => carousel
+ => carousel - DONE
 
  Tell me a short story about the card!
  => bing spell check api - DONE
@@ -202,17 +202,19 @@ bot.dialog('/photo', [
                     fs.writeFile('files/'+options.url.split('/')[5]+'.jpg', response.body, 'binary', function(err) {
                         if (err) throw err
                         console.log('File savd')
+                        var imagePath = 'https://c7d36c61.ngrok.io/' + 'files/'+options.url.split('/')[5]+'.jpg'
+                        session.send('Your file is at %s', imagePath)
                     })
                 })
-                // imgs.getAttachment(connector.authenticatedRequest, attachment.contentUrl)
                 // msg.addAttachment(attachment);
             });
-            session.endDialog('That is really cool');
+            session.replaceDialog('/carousel');
         } else {
             session.endDialog("You canceled.");
         }    
     }
 ])
+
 
 
 
@@ -243,38 +245,50 @@ bot.dialog('/carousel', [
             .attachmentLayout(builder.AttachmentLayout.carousel)
             .attachments([
                 new builder.HeroCard(session)
-                    .title("Space Needle")
-                    .text("The <b>Space Needle</b> is an observation tower in Seattle, Washington, a landmark of the Pacific Northwest, and an icon of Seattle.")
+                    .title("Original")
                     .images([
-                        builder.CardImage.create(session, "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Seattlenighttimequeenanne.jpg/320px-Seattlenighttimequeenanne.jpg")
-                            .tap(builder.CardAction.showImage(session, "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Seattlenighttimequeenanne.jpg/800px-Seattlenighttimequeenanne.jpg")),
+                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")
+                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")),
                     ])
                     .buttons([
-                        builder.CardAction.openUrl(session, "https://en.wikipedia.org/wiki/Space_Needle", "Wikipedia"),
-                        builder.CardAction.imBack(session, "select:100", "Select")
+                        builder.CardAction.imBack(session, "select:100", "Stick with this")
                     ]),
                 new builder.HeroCard(session)
-                    .title("Pikes Place Market")
-                    .text("<b>Pike Place Market</b> is a public market overlooking the Elliott Bay waterfront in Seattle, Washington, United States.")
+                    .title("Vintage")
                     .images([
-                        builder.CardImage.create(session, "https://upload.wikimedia.org/wikipedia/en/thumb/2/2a/PikePlaceMarket.jpg/320px-PikePlaceMarket.jpg")
-                            .tap(builder.CardAction.showImage(session, "https://upload.wikimedia.org/wikipedia/en/thumb/2/2a/PikePlaceMarket.jpg/800px-PikePlaceMarket.jpg")),
+                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")
+                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")),
                     ])
                     .buttons([
-                        builder.CardAction.openUrl(session, "https://en.wikipedia.org/wiki/Pike_Place_Market", "Wikipedia"),
-                        builder.CardAction.imBack(session, "select:101", "Select")
+                        builder.CardAction.imBack(session, "select:101", "Choose this filter")
                     ]),
                 new builder.HeroCard(session)
-                    .title("EMP Museum")
-                    .text("<b>EMP Musem</b> is a leading-edge nonprofit museum, dedicated to the ideas and risk-taking that fuel contemporary popular culture.")
+                    .title("Lomo")
                     .images([
-                        builder.CardImage.create(session, "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Night_Exterior_EMP.jpg/320px-Night_Exterior_EMP.jpg")
-                            .tap(builder.CardAction.showImage(session, "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Night_Exterior_EMP.jpg/800px-Night_Exterior_EMP.jpg"))
+                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")
+                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg"))
                     ])
                     .buttons([
-                        builder.CardAction.openUrl(session, "https://en.wikipedia.org/wiki/EMP_Museum", "Wikipedia"),
-                        builder.CardAction.imBack(session, "select:102", "Select")
+                        builder.CardAction.imBack(session, "select:102", "Choose this filter")
+                    ]),
+                new builder.HeroCard(session)
+                    .title("Clarity")
+                    .images([
+                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")
+                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg"))
                     ])
+                    .buttons([
+                        builder.CardAction.imBack(session, "select:103", "Choose this filter")
+                    ]),
+                new builder.HeroCard(session)
+                    .title("Sin City")
+                    .images([
+                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg")
+                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/0-cus-d3-87b86093bd4340a03689a868001477be.jpg"))
+                    ])
+                    .buttons([
+                        builder.CardAction.imBack(session, "select:104", "Choose this filter")
+                    ]),
             ]);
         builder.Prompts.choice(session, msg, "select:100|select:101|select:102");
     },
@@ -298,7 +312,7 @@ bot.dialog('/carousel', [
                     item = "the <b>EMP Museum</b>";
                     break;
             }
-            session.replaceDialog('/story');
+            session.endDialog();
         } else {
             session.endDialog("You canceled.");
         }
