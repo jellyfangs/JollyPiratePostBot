@@ -1,27 +1,3 @@
-/*-----------------------------------------------------------------------------
-This Bot uses the Bot Connector Service but is designed to showcase whats 
-possible on Skype using the framework. The demo shows how to create a looping 
-menu, how send things like Pictures, Hero & Thumbnail Cards, Receipts, and use 
-Carousels. It alsoshows all of the prompts supported by Bot Builder and how to 
-recieve uploaded photos and videos.
-
-# RUN THE BOT:
-
-    You can run the bot locally using the Bot Framework Emulator but for the best
-    experience you should register a new bot on Facebook and bind it to the demo 
-    bot. You can run the bot locally using ngrok found at https://ngrok.com/.
-
-    * Install and run ngrok in a console window using "ngrok http 3978".
-    * Create a bot on https://dev.botframework.com and follow the steps to setup
-      a Skype channel.
-    * For the endpoint you setup on dev.botframework.com, copy the https link 
-      ngrok setup and set "<ngrok link>/api/messages" as your bots endpoint.
-    * In a separate console window set MICROSOFT_APP_ID and MICROSOFT_APP_PASSWORD
-      and run "node app.js" from the example directory. You should be ready to add 
-      your bot as a contact and say "hello" to start the demo.
-
------------------------------------------------------------------------------*/
-
 var restify = require('restify');
 var builder = require('botbuilder');
 
@@ -51,44 +27,16 @@ server.listen(process.env.PORT || 3978, function () {
 var bot = new builder.UniversalBot(connector);
 
 //=========================================================
-// Activity Events
+// ON ADD
 //=========================================================
 
-bot.on('conversationUpdate', function (message) {
-   // Check for group conversations
-    if (message.address.conversation.isGroup) {
-        // Send a hello message when bot is added
-        if (message.membersAdded) {
-            message.membersAdded.forEach(function (identity) {
-                if (identity.id === message.address.bot.id) {
-                    var reply = new builder.Message()
-                            .address(message.address)
-                            .text("Hello everyone!");
-                    bot.send(reply);
-                }
-            });
-        }
-
-        // Send a goodbye message when bot is removed
-        if (message.membersRemoved) {
-            message.membersRemoved.forEach(function (identity) {
-                if (identity.id === message.address.bot.id) {
-                    var reply = new builder.Message()
-                        .address(message.address)
-                        .text("Goodbye");
-                    bot.send(reply);
-                }
-            });
-        }
-    }
-});
 
 bot.on('contactRelationUpdate', function (message) {
     if (message.action === 'add') {
         var name = message.user ? message.user.name : null;
         var reply = new builder.Message()
                 .address(message.address)
-                .text("Hello %s... Thanks for adding me. Say 'hello' to see some great demos.", name || 'there');
+                .text("Hello %s... Thanks for adding me! Say 'hi' to see some great demos.", name || 'there');
         bot.send(reply);
     } else {
         // delete their data
@@ -109,7 +57,7 @@ bot.on('deleteUserData', function (message) {
 //=========================================================
 
 // Anytime the major version is incremented any existign conversations will be restarted.
-// bot.use(builder.Middleware.dialogVersion({ version: 1.0, resetCommand: /^reset/i }));
+bot.use(builder.Middleware.dialogVersion({ version: 1.0, resetCommand: /^reset/i }));
 
 //=========================================================
 // Bots Dialogs
@@ -117,120 +65,67 @@ bot.on('deleteUserData', function (message) {
 
 bot.dialog('/', [
     function (session) {
-    		console.log(session.message.user.name, 'says', session.message.text)
         // Send a greeting and start the menu.
-        var card = new builder.HeroCard(session)
-            .title("Microsoft Bot Framework")
-            .text("Your bots - wherever your users are talking.")
-            .images([
-                 builder.CardImage.create(session, "http://docs.botframework.com/images/demo_bot_image.png")
-            ]);
-        var msg = new builder.Message(session).attachments([card]);
-        session.send(msg);
-        session.send("Hi... I'm the Microsoft Bot Framework demo bot for Skype. I can show you everything you can use our Bot Builder SDK to do on Skype.");
-        session.beginDialog('/menu');
-        console.log('BOT WANTS TO TALK TO')
-        console.log(session.message.address)
-    },
-    function (session, results) {
-        // Always say goodbye
-        session.send("Ok... See you later!");
-    }
-]);
-
-bot.dialog('/menu', [
-    function (session) {
-        builder.Prompts.choice(session, "What demo would you like to run?", "prompts|picture|cards|list|carousel|receipt|(quit)");
-    },
-    function (session, results) {
-        if (results.response && results.response.entity != '(quit)') {
-            switch (results.response.entity) {
-                case 'prompts':
-                    session.beginDialog('/prompts');
-                    break;
-                case 'picture':
-                    session.beginDialog('/picture');
-                    break;
-                case 'cards':
-                    session.beginDialog('/cards');
-                    break;
-                case 'list':
-                    session.beginDialog('/list');
-                    break;
-                case 'carousel':
-                    session.beginDialog('/carousel');
-                    break;
-                case 'receipt':
-                    session.beginDialog('/receipt');
-                    break;
-                case 'signin':
-                    session.beginDialog('/signin');
-                    break;
-            }
-        } else {
-            // Exit the menu
-            session.endDialog();
-        }
-    },
-    function (session, results) {
-        // The menu runs a loop until the user chooses to (quit).
-        session.replaceDialog('/menu');
-    }
-])
-
-bot.dialog('/prompts', [
-    function (session) {
-        session.send("Our Bot Builder SDK has a rich set of built-in prompts that simplify asking the user a series of questions. This demo will walk you through using each prompt. Just follow the prompts and you can quit at any time by saying 'cancel'.");
-        builder.Prompts.text(session, "Prompts.text()\n\nEnter some text and I'll say it back.");
-    },
-    function (session, results) {
-        if (results && results.response) {
-            session.send("You entered '%s'", results.response);
-            builder.Prompts.number(session, "Prompts.number()\n\nNow enter a number.");
-        } else {
-            session.endDialog("You canceled.");
-        }
-    },
-    function (session, results) {
-        if (results && results.response) {
-            session.send("You entered '%s'", results.response);
-            session.send("Bot Builder includes a rich choice() prompt that lets you offer a user a list choices to pick from. On Facebook these choices by default surface using buttons if there are 3 or less choices. If there are more than 3 choices a numbered list will be used but you can specify the exact type of list to show using the ListStyle property.");
-            builder.Prompts.choice(session, "Prompts.choice()\n\nChoose a list style (the default is auto.)", "auto|inline|list|button|none");
-        } else {
-            session.endDialog("You canceled.");
-        }
-    },
-    function (session, results) {
-        if (results && results.response) {
-            var style = builder.ListStyle[results.response.entity];
-            builder.Prompts.choice(session, "Prompts.choice()\n\nNow pick an option.", "option A|option B|option C", { listStyle: style });
-        } else {
-            session.endDialog("You canceled.");
-        }
-    },
-    function (session, results) {
-        if (results && results.response) {
-            session.send("You chose '%s'", results.response.entity);
-            builder.Prompts.confirm(session, "Prompts.confirm()\n\nSimple yes/no questions are possible. Answer yes or no now.");
-        } else {
-            session.endDialog("You canceled.");
-        }
+        // var card = new builder.HeroCard(session)
+        //     .title("")
+        //     .text("I can send post")
+        //     .images([
+        //          builder.CardImage.create(session, "http://docs.botframework.com/images/demo_bot_image.png")
+        //     ]);
+        // var msg = new builder.Message(session).attachments([card]);
+        // session.send(msg);
+        session.send("I can send a postcard for you to anywhere. Get started?");
+        builder.Prompts.confirm(session, "Get started? Answer yes or no now.");
     },
     function (session, results) {
         if (results && results.resumed == builder.ResumeReason.completed) {
             session.send("You chose '%s'", results.response ? 'yes' : 'no');
-            builder.Prompts.time(session, "Prompts.time()\n\nThe framework can recognize a range of times expressed as natural language. Enter a time like 'Monday at 7am' and I'll show you the JSON we return.");
+            session.beginDialog('/start')
         } else {
-            session.endDialog("You canceled.");
+            session.endDialog("Goodbye");
         }
-    },
-    function (session, results) {
-        if (results && results.response) {
-            session.send("Recognized Entity: %s", JSON.stringify(results.response));
-            builder.Prompts.attachment(session, "Prompts.attachment()\n\nYour bot can wait on the user to upload an image or video. Send me an image and I'll send it back to you.");
-        } else {
-            session.endDialog("You canceled.");
-        }
+    }
+]);
+
+/*
+
+ Welcome to Jolly Pirate Post!
+
+ I can send a postcard for you to anywhere. Get started?
+ => bing intent api
+
+ Give me a photo to work with
+ => computer vision api
+
+ How do you feel today?
+ => emotion api
+ 
+ Which card do you like?
+ => carousel
+
+ Tell me a short story about the card!
+ => bing spell check api
+ => text analytics api
+
+ Where will the card go?
+ => lob api
+
+ When do you want to send it?
+ => prompt time
+
+ Great, here you are!
+ => receipt
+
+ Also, use this referral code
+ => group chat
+
+*/
+
+
+// ATTACHMENTS
+bot.dialog('/start', [
+    function (session) {
+        builder.Prompts.attachment(session, "Give me a photo to work with.");
     },
     function (session, results) {
         if (results && results.response) {
@@ -239,85 +134,29 @@ bot.dialog('/prompts', [
             results.response.forEach(function (attachment) {
                 msg.addAttachment(attachment);    
             });
-            session.endDialog(msg);
+            session.replaceDialog('/emotion');
         } else {
             session.endDialog("You canceled.");
+        }    
+    }
+])
+
+// EMOTION API
+bot.dialog('/emotion', [
+    function (session) {
+        builder.Prompts.text(session, "How do you feel today?");
+    },
+    function (session, results) {
+        if (results && results.response) {
+            session.send("You entered '%s'", results.response);
+            session.replaceDialog('/cards')
+        } else {
+            session.endDialog('You canceled')
         }
     }
-]);
+])
 
-bot.dialog('/picture', [
-    function (session) {
-        session.send("You can easily send pictures to a user...");
-        var msg = new builder.Message(session)
-            .attachments([{
-                contentType: "image/jpeg",
-                contentUrl: "http://www.theoldrobots.com/images62/Bender-18.JPG"
-            }]);
-        session.endDialog(msg);
-    }
-]);
-
-bot.dialog('/cards', [
-    function (session) {
-        session.send("You can use Hero & Thumbnail cards to send the user a visually rich information...");
-
-        var msg = new builder.Message(session)
-            .textFormat(builder.TextFormat.xml)
-            .attachments([
-                new builder.HeroCard(session)
-                    .title("Hero Card")
-                    .subtitle("Space Needle")
-                    .text("The <b>Space Needle</b> is an observation tower in Seattle, Washington, a landmark of the Pacific Northwest, and an icon of Seattle.")
-                    .images([
-                        builder.CardImage.create(session, "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Seattlenighttimequeenanne.jpg/320px-Seattlenighttimequeenanne.jpg")
-                    ])
-                    //.tap(builder.CardAction.openUrl(session, "https://en.wikipedia.org/wiki/Space_Needle"))
-            ]);
-        session.send(msg);
-
-        msg = new builder.Message(session)
-            .textFormat(builder.TextFormat.xml)
-            .attachments([
-                new builder.ThumbnailCard(session)
-                    .title("Thumbnail Card")
-                    .subtitle("Pikes Place Market")
-                    .text("<b>Pike Place Market</b> is a public market overlooking the Elliott Bay waterfront in Seattle, Washington, United States.")
-                    .images([
-                        builder.CardImage.create(session, "https://upload.wikimedia.org/wikipedia/en/thumb/2/2a/PikePlaceMarket.jpg/320px-PikePlaceMarket.jpg")
-                    ])
-                    //.tap(builder.CardAction.openUrl(session, "https://en.wikipedia.org/wiki/Pike_Place_Market"))
-            ]);
-        session.endDialog(msg);
-    }
-]);
-
-bot.dialog('/list', [
-    function (session) {
-        session.send("You can send the user a list of cards...");
-
-        var msg = new builder.Message(session)
-            .textFormat(builder.TextFormat.xml)
-            .attachments([
-                new builder.HeroCard(session)
-                    .title("Hero Card")
-                    .subtitle("Space Needle")
-                    .text("The <b>Space Needle</b> is an observation tower in Seattle, Washington, a landmark of the Pacific Northwest, and an icon of Seattle.")
-                    .images([
-                        builder.CardImage.create(session, "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Seattlenighttimequeenanne.jpg/320px-Seattlenighttimequeenanne.jpg")
-                    ]),
-                new builder.ThumbnailCard(session)
-                    .title("Thumbnail Card")
-                    .subtitle("Pikes Place Market")
-                    .text("<b>Pike Place Market</b> is a public market overlooking the Elliott Bay waterfront in Seattle, Washington, United States.")
-                    .images([
-                        builder.CardImage.create(session, "https://upload.wikimedia.org/wikipedia/en/thumb/2/2a/PikePlaceMarket.jpg/320px-PikePlaceMarket.jpg")
-                    ])
-            ]);
-        session.endDialog(msg);
-    }
-]);
-
+// CAROUSEL
 bot.dialog('/carousel', [
     function (session) {
         session.send("You can pass a custom message to Prompts.choice() that will present the user with a carousel of cards to select from. Each card can even support multiple actions.");
@@ -390,6 +229,43 @@ bot.dialog('/carousel', [
     }    
 ]);
 
+
+// PROMPT TEXT and TEXT ANALYTICS API
+bot.dialog('/story', [
+    function (session) {
+        builder.Prompts.text(session, "Tell me a short story about the photo");
+    },
+    function (session, results) {
+        if (results && results.response) {
+            session.send("You entered '%s'", results.response);
+            session.replaceDialog('/lob')
+        } else {
+            session.endDialog('You canceled')
+        }
+    }
+])
+
+// LOB API
+bot.dialog('/lob', [
+
+])
+
+// PROMPT TIME
+bot.dialog('/time', [
+    function (session) {
+        builder.Prompts.time(session, "When do you want to send the postcard?");
+    },
+    function (session, results) {
+        if (results && results.response) {
+            session.send("You entered '%s'", JSON.stringify(results.response));
+            session.replaceDialog('/receipt')
+        } else {
+            session.endDialog('You canceled')
+        }
+    }
+])
+
+// RECEIPT
 bot.dialog('/receipt', [
     function (session) {
         session.send("You can send a receipts for purchased good with both images and without...");
@@ -434,15 +310,36 @@ bot.dialog('/receipt', [
     }
 ]);
 
-bot.dialog('/signin', [ 
-    function (session) { 
-        // Send a signin 
-        var msg = new builder.Message(session) 
-            .attachments([ 
-                new builder.SigninCard(session) 
-                    .title("You must first signin to your account.") 
-                    .button("signin", "http://example.com/") 
-            ]); 
-        session.endDialog(msg); 
-    } 
-]); 
+// GROUP CHAT
+bot.dialog('/refer', [
+
+])
+
+bot.on('conversationUpdate', function (message) {
+   // Check for group conversations
+    if (message.address.conversation.isGroup) {
+        // Send a hello message when bot is added
+        if (message.membersAdded) {
+            message.membersAdded.forEach(function (identity) {
+                if (identity.id === message.address.bot.id) {
+                    var reply = new builder.Message()
+                            .address(message.address)
+                            .text("Hello everyone!");
+                    bot.send(reply);
+                }
+            });
+        }
+
+        // Send a goodbye message when bot is removed
+        if (message.membersRemoved) {
+            message.membersRemoved.forEach(function (identity) {
+                if (identity.id === message.address.bot.id) {
+                    var reply = new builder.Message()
+                        .address(message.address)
+                        .text("Goodbye");
+                    bot.send(reply);
+                }
+            });
+        }
+    }
+});
