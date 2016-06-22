@@ -75,7 +75,7 @@ bot.dialog('/', [
         // var msg = new builder.Message(session).attachments([card]);
         // session.send(msg);
         session.send("I can send a postcard for you to anywhere. Get started?");
-        builder.Prompts.confirm(session, "Get started? Answer yes or no now.");
+        builder.Prompts.confirm(session);
     },
     function (session, results) {
         if (results && results.resumed == builder.ResumeReason.completed) {
@@ -149,7 +149,7 @@ bot.dialog('/emotion', [
     function (session, results) {
         if (results && results.response) {
             session.send("You entered '%s'", results.response);
-            session.replaceDialog('/cards')
+            session.replaceDialog('/carousel')
         } else {
             session.endDialog('You canceled')
         }
@@ -222,7 +222,7 @@ bot.dialog('/carousel', [
                     item = "the <b>EMP Museum</b>";
                     break;
             }
-            session.endDialog('You %s "%s"', action, item);
+            session.replaceDialog('/story');
         } else {
             session.endDialog("You canceled.");
         }
@@ -247,7 +247,17 @@ bot.dialog('/story', [
 
 // LOB API
 bot.dialog('/lob', [
-
+    function (session) {
+        builder.Prompts.text(session, "What is the address?");
+    },
+    function (session, results) {
+        if (results && results.response) {
+            session.send("You entered '%s'", results.response);
+            session.replaceDialog('/time')
+        } else {
+            session.endDialog('You canceled')
+        }
+    }
 ])
 
 // PROMPT TIME
@@ -306,13 +316,16 @@ bot.dialog('/receipt', [
                     .tax("$4.40")
                     .total("$48.40")
             ]);
-        session.endDialog(msg);
+        session.send(msg)
+        session.replaceDialog('/refer');
     }
 ]);
 
 // GROUP CHAT
 bot.dialog('/refer', [
-
+    function (session) {
+        session.endDialog("Here you can refer a friend")
+    }
 ])
 
 bot.on('conversationUpdate', function (message) {
