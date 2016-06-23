@@ -189,6 +189,34 @@ bot.dialog('/message', [
                     if (reply.documents[0].score > 0.5) {
                         session.userData.feeling = 'happy'
                         session.send("Yar! That sounds like mighty good fun! I am very %s for you!", session.userData.feeling)
+                        session.replaceDialog('/carousel');
+                    } else {
+                        session.userData.feeling = 'sad'
+                        session.send("Shiver me timbers! That doesn't sound very good at all. I feel %s with you.", session.userData.feeling)
+                        builder.Prompts.text(session, "But are you sure that's how you feel?!")
+                    }
+                    // session.endDialog('goodbye');
+                } else {
+                    session.send("Got an error")
+                }
+            })
+        } else {
+            session.endDialog('You canceled.')
+        }
+    },
+    function (session, results) {
+        if (results && results.response) {
+            // save message
+            session.userData.message = results.response
+
+            // find out how you feel
+            cogs.Sentiment(results.response, function (reply) {
+                console.log('RESPONSE FROM SENTIMENT CHECK:', reply)
+                if (!reply.error) {
+                        console.log(reply.documents[0].score)
+                    if (reply.documents[0].score > 0.5) {
+                        session.userData.feeling = 'happy'
+                        session.send("Yar! That sounds like mighty good fun! I am very %s for you!", session.userData.feeling)
                     } else {
                         session.userData.feeling = 'sad'
                         session.send("Shiver me timbers! That doesn't sound very good at all. I feel %s with you.", session.userData.feeling)
@@ -202,6 +230,8 @@ bot.dialog('/message', [
         } else {
             session.endDialog('You canceled.')
         }
+
+        builder.Prompts.text(session, "Next you tell me how you feel about the photo. Don't be too chatty now.")
     },
 ])
 
@@ -237,7 +267,7 @@ var okayFilters =[
 var applyFilter = function(imageUrl, filter) {
  var id = uuid.v1();
  var original = os.tmpdir() + "/" + id;
- var filtered = id + ".jpg";
+ var filtered = id + "-" + filter + ".jpg";
  var filteredPath = "./files/" + filtered;
  
  // Save the remote image file to the /tmp fs
@@ -247,8 +277,12 @@ var applyFilter = function(imageUrl, filter) {
    // initialize CamanJS
    Caman(original, function () {
      // apply the filter
-     this.resize({width: 600});
+     // this.resize({width: 600});
      this[filter]();
+     // this.resize({
+     //    width: 800,
+     //    height: 600
+     // });
      this.render(function () {
        // save to the file system
        this.save(filteredPath);
@@ -293,11 +327,30 @@ var rotateImage = function(imageUrl) {
 };
 
 
+function helperFunc(zippyarray) {
+  return Promise.each(zippyarray, zippy => {
+    return applyFilter(zippy)
+      .then((singleResult) => {
+        // do something with the operation result if needed
+      })
+  }).then((originalArray) => {
+    // this happens only after the whole array is processed
+    // (result is the original array here)
+    return Promise.resolve(originalArray)
+  })
+}
+
 // CAROUSEL
 bot.dialog('/carousel', [
     function (session) {
         session.send("Because of how you feel I am trying these photo filters. Which do you like?");
         
+        // loop filters
+        // happyFilters.forEach(function (filter) {
+        //     applyFilter(session.userData.imageUrl, filter)
+        // });
+
+
         // Ask the user to select an item from a carousel.
         var msg = new builder.Message(session)
             .textFormat(builder.TextFormat.xml)
@@ -306,50 +359,50 @@ bot.dialog('/carousel', [
                 new builder.HeroCard(session)
                     // .title("Original")
                     .images([
-                        builder.CardImage.create(session, session.userData.imageUrl)
-                            .tap(builder.CardAction.showImage(session, session.userData.imageUrl)),
-                    ])
-                    .buttons([
-                        builder.CardAction.imBack(session, "select:original", "Stick with original")
-                    ]),
-                new builder.HeroCard(session)
-                    // .title("Vintage")
-                    .images([
-                        builder.CardImage.create(session, session.userData.imageUrl)
-                            .tap(builder.CardAction.showImage(session, session.userData.imageUrl)),
-                    ])
-                    .buttons([
-                        builder.CardAction.imBack(session, "select:vintage", "Apply Vintage filter")
-                    ]),
-                new builder.HeroCard(session)
-                    // .title("Lomo")
-                    .images([
-                        builder.CardImage.create(session, session.userData.imageUrl)
-                            .tap(builder.CardAction.showImage(session, session.userData.imageUrl))
-                    ])
-                    .buttons([
-                        builder.CardAction.imBack(session, "select:lomo", "Apply Lomo filter")
-                    ]),
-                new builder.HeroCard(session)
-                    // .title("Clarity")
-                    .images([
-                        builder.CardImage.create(session, session.userData.imageUrl)
-                            .tap(builder.CardAction.showImage(session, session.userData.imageUrl))
+                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/"+"cf44de60-38d7-11e6-8831-89bc37a1253b-clarity.jpg")
+                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/"+"cf44de60-38d7-11e6-8831-89bc37a1253b-clarity.jpg")),
                     ])
                     .buttons([
                         builder.CardAction.imBack(session, "select:clarity", "Apply Clarity filter")
                     ]),
                 new builder.HeroCard(session)
-                    // .title("Sin City")
+                    // .title("Vintage")
                     .images([
-                        builder.CardImage.create(session, session.userData.imageUrl)
-                            .tap(builder.CardAction.showImage(session, session.userData.imageUrl))
+                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/"+"cf452c80-38d7-11e6-8831-89bc37a1253b-glowingSun.jpg")
+                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/"+"cf452c80-38d7-11e6-8831-89bc37a1253b-glowingSun.jpg")),
                     ])
                     .buttons([
-                        builder.CardAction.imBack(session, "select:sinCity", "Apply Sin City filter")
+                        builder.CardAction.imBack(session, "select:glowingSun", "Apply Glowing Sun filter")
+                    ]),
+                new builder.HeroCard(session)
+                    // .title("Lomo")
+                    .images([
+                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/"+"cf452c81-38d7-11e6-8831-89bc37a1253b-love.jpg")
+                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/"+"cf452c81-38d7-11e6-8831-89bc37a1253b-love.jpg"))
+                    ])
+                    .buttons([
+                        builder.CardAction.imBack(session, "select:love", "Apply Love filter")
+                    ]),
+                new builder.HeroCard(session)
+                    // .title("Clarity")
+                    .images([
+                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/"+"cf446930-38d7-11e6-8831-89bc37a1253b-lomo.jpg")
+                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/"+"cf446930-38d7-11e6-8831-89bc37a1253b-lomo.jpg"))
+                    ])
+                    .buttons([
+                        builder.CardAction.imBack(session, "select:lomo", "Apply Lomo filter")
+                    ]),
+                new builder.HeroCard(session)
+                    // .title("Sin City")
+                    .images([
+                        builder.CardImage.create(session, "https://c7d36c61.ngrok.io/files/"+"cf450570-38d7-11e6-8831-89bc37a1253b-sunrise.jpg")
+                            .tap(builder.CardAction.showImage(session, "https://c7d36c61.ngrok.io/files/"+"cf450570-38d7-11e6-8831-89bc37a1253b-sunrise.jpg"))
+                    ])
+                    .buttons([
+                        builder.CardAction.imBack(session, "select:sunrise", "Apply Sunrise filter")
                     ]),
             ]);
-        builder.Prompts.choice(session, msg, "select:original|select:vintage|select:lomo|select:clarity|select:sinCity");
+        builder.Prompts.choice(session, msg, "select:clarity|select:glowingSun|select:love|select:lomo|select:sunrise");
     },
     function (session, results) {
         if (results.response) {
@@ -361,25 +414,29 @@ bot.dialog('/carousel', [
                     break;
             }
             switch (kvPair[1]) {
-                case 'original':
-                    item = "You want the original";
+                case 'clarity':
+                    item = "clarity";
                     break;
-                case 'vintage':
-                    item = "You want the Vintage";
+                case 'glowingSun':
+                    item = "glowingSun";
+                    break;
+                case 'love':
+                    item = "love";
                     break;
                 case 'lomo':
-                    item = "You want the Lomo";
+                    item = "lomo";
                     break;
-                case 'clarity':
-                    item = "You want the Clarity";
-                    break;
-                case 'sinCity':
-                    item = "You want the sin City";
+                case 'sunrise':
+                    item = "sunrise";
                     break;
             }
-            session.send(item)
+            session.send("%s?", item)
+            session.send("La di da! Did anyone tell you you are very good at picking filters?")
+
+            // session.userData.filter = "https://c7d36c61.ngrok.io/files/cf452c81-38d7-11e6-8831-89bc37a1253b-love.jpg"
+            // session.userData.filter = filter
             // session.endDialog('goodbye');
-            session.replaceDialog('/address');
+            session.replaceDialog('/address')
         } else {
             session.endDialog("You canceled.");
         }
@@ -532,7 +589,8 @@ bot.dialog('/lob', [
                     front: postcardTemplate,
                     message: session.userData.message,
                     data: {
-                        image: session.userData.imageUrl
+                        // image: session.userData.imageUrl
+                        image: "https://c7d36c61.ngrok.io/files/cf452c81-38d7-11e6-8831-89bc37a1253b-love.jpg"
                     }
                 })
             })
